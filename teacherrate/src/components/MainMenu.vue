@@ -24,11 +24,12 @@
       <div class="classes col-6 ps-4">
         <h2 class="class-header mb-3 ">Õppeained</h2>
 
-        <div class="class-list">
+        <div class="class-list" style="background-color: darkgray;">
           <div v-for="cls in classes" :key="cls.id" class="card mb-3 class-card">
             <div class="card-body d-flex justify-content-between align-items-center">
               <h5 class="card-title mb-0">{{ cls.name }}</h5>
               <div class="class-rating">
+                <img src="../assets/riks.jpeg" alt="" style="max-height: 50px;">
                 <span class="me-2">⭐ {{ cls.rating.toFixed(1) }}</span>
                 <button class="btn btn-sm btn-primary">Hinda</button>
               </div>
@@ -39,8 +40,12 @@
 
 
 
-      <div class="col-6">
+      <div class="col-6 ">
 
+      <!-- <h2 style="text-align: center; font-size: 100px;">ELIITHÄKKERID</h2> -->
+       
+        <img id="elite_gif" src="../assets/text.png" alt="Description of text" />
+        <img id="elite_gif" src="../assets/elitehackers.gif" alt="Description of GIF" />
       </div>
     </div>
   </div>
@@ -48,10 +53,22 @@
 
 <script>
 export default {
-  name: "ClassList",
+  name: "MainMenu",
   data() {
     return {
       classes: [
+        { name: "Matemaatika", rating: 4.3 },
+        { name: "Eesti keel", rating: 3.9 },
+        { name: "Programmeerimine", rating: 4.8 },
+        { name: "Ajalugu", rating: 4.1 },
+        { name: "Bioloogia", rating: 3.7 },
+        { name: "Keemia", rating: 4.0 },
+        { name: "Bioloogia", rating: 3.7 },
+        { name: "Keemia", rating: 4.0 },
+        { name: "Bioloogia", rating: 3.7 },
+        { name: "Keemia", rating: 4.0 },
+        { name: "Bioloogia", rating: 3.7 },
+        { name: "Keemia", rating: 4.0 },
         { name: "Matemaatika", rating: 4.3 },
         { name: "Eesti keel", rating: 3.9 },
         { name: "Programmeerimine", rating: 4.8 },
@@ -71,6 +88,11 @@ export default {
 </script>
 
 <style>
+
+#elite_gif{
+  width: 100%;
+}
+
 .class-list {
   max-height: 650px;
   overflow-y: auto;
