@@ -58,8 +58,10 @@
               v-for="(r, index) in selectedClass.comments"
               :key="index"
               class="list-group-item d-flex justify-content-between align-items-center"
+              @click="selectedComment = r"
+              style="cursor: pointer;"
             >
-              <span>{{ r.text }}</span>
+              <span class="text-truncate" style="max-width: 70%;">{{ r.text }}</span>
               <span>⭐ {{ r.stars }}</span>
             </li>
           </ul>
@@ -94,6 +96,16 @@
       </div>
     </div>
   </transition>
+
+  <!-- COMMENT POPUP -->
+  <div v-if="selectedComment" class="comment-popup" @click.self="selectedComment = null">
+    <div class="popup-content">
+      <h5>Hinnang</h5>
+      <p class="comment-text">{{ selectedComment.text }}</p>
+      <p>⭐ {{ selectedComment.stars }}</p>
+      <button class="btn btn-secondary" @click="selectedComment = null">Sulge</button>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -106,6 +118,7 @@ export default {
       selectedClass: {},
       userRating: null,
       userComment: "",
+      selectedComment: null,
       classes: [
         {
           name: "Matemaatika",
@@ -194,18 +207,48 @@ export default {
   background-color: #171718;
   box-shadow: -4px 0 10px rgba(0, 0, 0, 0.4);
   z-index: 1050;
-  overflow-y: auto; 
-  padding: 2rem; 
+  overflow-y: auto;
+  padding: 2rem;
   color: white;
   display: flex;
-  flex-direction: column; 
+  flex-direction: column;
   align-items: center;
-  justify-content: flex-start; 
+  justify-content: flex-start;
 }
 
 .rating-content {
   width: 80%;
   text-align: center;
+}
+
+/* COMMENT POPUP */
+.comment-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.popup-content {
+  background: #222;
+  color: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  width: 60%;
+  max-width: 600px;
+  text-align: center;
+  box-shadow: 0 0 10px black;
+}
+
+.comment-text {
+  white-space: pre-wrap;
+  margin: 1rem 0;
 }
 
 /* Smooth slide animation */
