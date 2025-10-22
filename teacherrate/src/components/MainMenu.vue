@@ -3,9 +3,10 @@
     <div class="container-fluid d-flex align-items-center">
       <button type="button" class="btn btn-danger me-3">Logi välja</button>
 
-      <form class="d-flex flex-grow-1 me-3" role="search" style="max-width: 500px;">
-        <input class="form-control me-2" type="search" placeholder="Otsi õppeainet" aria-label="Search" />
-        <button class="btn btn-success" type="submit">Otsi</button>
+      <form class="d-flex flex-grow-1 me-3" role="search" @submit.prevent style="max-width: 500px;">
+        <input v-model="searchQuery" class="form-control me-2" type="search" placeholder="Otsi õppeainet"
+          aria-label="Search" />
+        <button class="btn btn-success" type="button">Otsi</button>
       </form>
 
       <div class="d-flex align-items-center">
@@ -17,25 +18,31 @@
 
   <div class="container-fluid my-5">
     <div class="row">
-      <!-- CLASS LIST -->
       <div class="classes col-6 ps-4">
-        <h2 class="class-header mb-3">Õppeained</h2>
+        <!-- ADD CLASS FORM -->
+        <div class="mb-4">
+          <input v-model="newClassName" type="text" class="form-control mb-2" placeholder="Lisa uus õppeaine" />
+          <button class="btn btn-success" @click="addClass">Lisa</button>
+        </div>
 
+        <!-- CLASS LIST -->
         <div class="class-list" style="background-color: darkgray;">
-          <div v-for="cls in classes" :key="cls.name" class="card mb-3 class-card">
+          <div v-for="(cls, index) in filteredClasses" :key="cls.name" class="card mb-3 class-card">
             <div class="card-body d-flex justify-content-between align-items-center">
               <h5 class="card-title mb-0">{{ cls.name }}</h5>
-              <div class="class-rating">
-                <img src="../assets/riks.jpeg" alt="" style="max-height: 50px;">
-                <span class="me-2">⭐ {{ cls.rating.toFixed(1) }}</span>
-                <button class="btn btn-sm btn-primary" @click="openMenu(cls)">Hinda</button>
+              <div class="d-flex align-items-center">
+                <div class="class-rating me-2">
+                  <img src="../assets/riks.jpeg" alt="" style="max-height: 50px;" />
+                  <span class="me-2">⭐ {{ cls.rating.toFixed(1) }}</span>
+                  <button class="btn btn-sm btn-primary" @click="openMenu(cls)">Hinda</button>
+                </div>
+                <button class="btn btn-sm btn-danger" @click="deleteClass(index)">Kustuta</button>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      <!-- RIGHT HALF -->
+      <!-- Right half column -->
       <div class="col-6">
         <img id="elite_gif" src="../assets/text.png" alt="Description of text" />
         <img id="elite_gif" src="../assets/elitehackers.gif" alt="Description of GIF" />
@@ -54,15 +61,18 @@
         <div class="other-ratings mb-4">
           <h5>Teiste hinnangud:</h5>
           <ul class="list-group">
-            <li
-              v-for="(r, index) in selectedClass.comments"
-              :key="index"
-              class="list-group-item d-flex justify-content-between align-items-center"
-              @click="selectedComment = r"
-              style="cursor: pointer;"
-            >
-              <span class="text-truncate" style="max-width: 70%;">{{ r.text }}</span>
-              <span>⭐ {{ r.stars }}</span>
+            <li v-for="(r, index) in selectedClass.comments" :key="index"
+              class="list-group-item d-flex justify-content-between align-items-center" @click="selectedComment = r"
+              style="cursor: pointer;">
+
+              <span class="text-truncate" style="max-width: 60%;">{{ truncate(r.text) }}</span>
+
+              <!-- Wrap stars + button -->
+              <div class="d-flex align-items-center">
+                <span class="me-2">⭐ {{ r.stars }}</span>
+                <button class="btn btn-sm btn-danger" @click.stop="deleteComment(index)">Kustuta</button>
+              </div>
+
             </li>
           </ul>
         </div>
@@ -75,19 +85,9 @@
 
         <!-- RATING INPUT SECTION -->
         <div v-else>
-          <input
-            type="number"
-            v-model="userRating"
-            min="1"
-            max="5"
-            class="form-control my-3"
-            placeholder="Sinu hinne"
-          />
-          <textarea
-            v-model="userComment"
-            class="form-control mb-3"
-            placeholder="Sinu kommentaar"
-          ></textarea>
+          <input type="number" v-model="userRating" min="1" max="5" class="form-control my-3"
+            placeholder="Sinu hinne" />
+          <textarea v-model="userComment" class="form-control mb-3" placeholder="Sinu kommentaar"></textarea>
           <div>
             <button class="btn btn-success me-2" @click="submitRating">Salvesta</button>
             <button class="btn btn-secondary" @click="showRatingInput = false">Tagasi</button>
@@ -113,41 +113,33 @@ export default {
   name: "MainMenu",
   data() {
     return {
+      newClassName: "",
+      searchQuery: "",
       menuOpen: false,
       showRatingInput: false,
       selectedClass: {},
       userRating: null,
       userComment: "",
       selectedComment: null,
-      classes: [
-        {
-          name: "Matemaatika",
-          rating: 4.3,
-          comments: [
-            { text: "Väga raske, aga õpetlik.", stars: 4 },
-            { text: "Õpetaja super!", stars: 5 }
-          ]
-        },
-        {
-          name: "Eesti keel",
-          rating: 3.9,
-          comments: [{ text: "Natuke igav.", stars: 3 }]
-        },
-        {
-          name: "Programmeerimine",
-          rating: 4.8,
-          comments: [{ text: "Parim tund üldse!", stars: 5 }]
-        }
-      ]
+      classes: []
     };
   },
+  computed: {
+    filteredClasses() {
+      const q = this.searchQuery.toLowerCase();
+      return this.classes.filter(c => c.name.toLowerCase().includes(q));
+    }
+  },
   mounted() {
-  fetch("http://localhost:3000/api/classes")
-    .then(res => res.json())
-    .then(data => this.classes = data)
-    .catch(() => console.error("Failed to load classes"));
+    fetch("http://localhost:3000/api/classes")
+      .then(res => res.json())
+      .then(data => this.classes = data)
+      .catch(() => console.error("Failed to load classes"));
   },
   methods: {
+    truncate(text, max = 20) {
+      return text.length > max ? text.slice(0, max) + '…' : text;
+    },
     openMenu(cls) {
       this.selectedClass = cls;
       this.menuOpen = true;
@@ -159,22 +151,100 @@ export default {
       this.menuOpen = false;
     },
     async submitRating() {
-    if (!this.userRating || !this.userComment) return;
-    const newRating = { text: this.userComment, stars: Number(this.userRating) };
+      if (!this.userRating || !this.userComment) return;
 
-    
-    this.selectedClass.comments.push(newRating);
+      const rating = Number(this.userRating);
+      if (rating < 1 || rating > 5) {
+        alert("Hinne peab olema vahemikus 1 kuni 5!");
+        return;
+      }
 
-    
-    await fetch(`http://localhost:3000/api/classes/${this.selectedClass.name}/rating`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newRating)
-     });
-    this.showRatingInput = false;
-    this.userRating = null;
-    this.userComment = "";
-  }
+      const newRating = { text: this.userComment, stars: rating };
+
+      try {
+        const updatedClass = await fetch(
+          `http://localhost:3000/api/classes/${this.selectedClass.name}/rating`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newRating)
+          }
+        ).then(res => res.json());
+
+        Object.assign(this.selectedClass, updatedClass);
+        const index = this.classes.findIndex(c => c.name === updatedClass.name);
+        if (index !== -1) {
+          this.classes.splice(index, 1, updatedClass);
+        }
+
+        // Reset rating input
+        this.showRatingInput = false;
+        this.userRating = null;
+        this.userComment = "";
+
+      } catch (err) {
+        console.error(err);
+        alert("Hinne salvestamine ebaõnnestus!");
+      }
+    },
+
+    async deleteComment(index) {
+      if (!confirm("Kas oled kindel, et soovid selle kommentaari kustutada?")) return;
+
+      this.selectedClass.comments.splice(index, 1)[0];
+
+      // Recalculate average
+      this.selectedClass.rating =
+        this.selectedClass.comments.reduce((sum, c) => sum + c.stars, 0) /
+        (this.selectedClass.comments.length || 1);
+
+      // Update JSON on server
+      await fetch(`http://localhost:3000/api/classes/${this.selectedClass.name}/rating/${index}`, {
+        method: "DELETE"
+      });
+    },
+    async addClass() {
+      const name = this.newClassName.trim();
+      if (!name) return alert("Sisesta klassi nimi!");
+
+      try {
+        const res = await fetch("http://localhost:3000/api/classes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) return alert(data.error);
+
+        this.classes.push(data);
+        this.newClassName = "";
+      } catch (err) {
+        console.error(err);
+        alert("Klassi lisamine ebaõnnestus");
+      }
+    },
+    async deleteClass(index) {
+      const cls = this.classes[index];
+      if (!confirm(`Kas oled kindel, et soovid kustutada "${cls.name}"?`)) return;
+
+      try {
+        const res = await fetch(`http://localhost:3000/api/classes/${cls.name}`, {
+          method: "DELETE"
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          return alert(data.error);
+        }
+
+        this.classes.splice(index, 1);
+      } catch (err) {
+        console.error(err);
+        alert("Kustutamine ebaõnnestus");
+      }
+    }
   }
 };
 </script>
@@ -261,6 +331,7 @@ export default {
 .slide-leave-active {
   transition: transform 0.4s ease;
 }
+
 .slide-enter-from,
 .slide-leave-to {
   transform: translateX(100%);

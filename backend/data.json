@@ -2,12 +2,8 @@
   "classes": [
     {
       "name": "Matemaatika",
-      "rating": 4.666666666666667,
+      "rating": 4.6,
       "comments": [
-        {
-          "text": "Väga raske, aga õpetlik.",
-          "stars": 4
-        },
         {
           "text": "Õpetaja super!",
           "stars": 5
@@ -15,15 +11,31 @@
         {
           "text": "dwad",
           "stars": 5
+        },
+        {
+          "text": "w",
+          "stars": 4
+        },
+        {
+          "text": "dwaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "stars": 4
+        },
+        {
+          "text": "Tore",
+          "stars": 5
         }
       ]
     },
     {
       "name": "Eesti keel",
-      "rating": 3.9,
+      "rating": 3,
       "comments": [
         {
           "text": "Natuke igav.",
+          "stars": 3
+        },
+        {
+          "text": "da",
           "stars": 3
         }
       ]
