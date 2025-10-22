@@ -2,24 +2,40 @@
   "classes": [
     {
       "name": "Matemaatika",
-      "rating": 4.3,
+      "rating": 4.666666666666667,
       "comments": [
-        { "text": "Väga raske, aga õpetlik.", "stars": 4 },
-        { "text": "Õpetaja super!", "stars": 5 }
+        {
+          "text": "Väga raske, aga õpetlik.",
+          "stars": 4
+        },
+        {
+          "text": "Õpetaja super!",
+          "stars": 5
+        },
+        {
+          "text": "dwad",
+          "stars": 5
+        }
       ]
     },
     {
       "name": "Eesti keel",
       "rating": 3.9,
       "comments": [
-        { "text": "Natuke igav.", "stars": 3 }
+        {
+          "text": "Natuke igav.",
+          "stars": 3
+        }
       ]
     },
     {
       "name": "Programmeerimine",
       "rating": 4.8,
       "comments": [
-        { "text": "Parim tund üldse!", "stars": 5 }
+        {
+          "text": "Parim tund üldse!",
+          "stars": 5
+        }
       ]
     }
   ]

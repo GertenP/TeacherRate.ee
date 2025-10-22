@@ -141,6 +141,12 @@ export default {
       ]
     };
   },
+  mounted() {
+  fetch("http://localhost:3000/api/classes")
+    .then(res => res.json())
+    .then(data => this.classes = data)
+    .catch(() => console.error("Failed to load classes"));
+  },
   methods: {
     openMenu(cls) {
       this.selectedClass = cls;
@@ -152,24 +158,23 @@ export default {
     closeMenu() {
       this.menuOpen = false;
     },
-    submitRating() {
-      if (this.userRating && this.userComment) {
-        this.selectedClass.comments.push({
-          text: this.userComment,
-          stars: Number(this.userRating)
-        });
+    async submitRating() {
+    if (!this.userRating || !this.userComment) return;
+    const newRating = { text: this.userComment, stars: Number(this.userRating) };
 
-        // Update average rating
-        const total =
-          this.selectedClass.comments.reduce((sum, r) => sum + r.stars, 0) /
-          this.selectedClass.comments.length;
-        this.selectedClass.rating = total;
+    
+    this.selectedClass.comments.push(newRating);
 
-        this.showRatingInput = false;
-        this.userRating = null;
-        this.userComment = "";
-      }
-    }
+    
+    await fetch(`http://localhost:3000/api/classes/${this.selectedClass.name}/rating`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newRating)
+     });
+    this.showRatingInput = false;
+    this.userRating = null;
+    this.userComment = "";
+  }
   }
 };
 </script>
