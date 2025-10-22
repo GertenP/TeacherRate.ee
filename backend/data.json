@@ -1,0 +1,26 @@
+{
+  "classes": [
+    {
+      "name": "Matemaatika",
+      "rating": 4.3,
+      "comments": [
+        { "text": "Väga raske, aga õpetlik.", "stars": 4 },
+        { "text": "Õpetaja super!", "stars": 5 }
+      ]
+    },
+    {
+      "name": "Eesti keel",
+      "rating": 3.9,
+      "comments": [
+        { "text": "Natuke igav.", "stars": 3 }
+      ]
+    },
+    {
+      "name": "Programmeerimine",
+      "rating": 4.8,
+      "comments": [
+        { "text": "Parim tund üldse!", "stars": 5 }
+      ]
+    }
+  ]
+}
