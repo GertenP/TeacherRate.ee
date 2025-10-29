@@ -133,19 +133,37 @@ export default {
   mounted() {
     fetch("http://localhost:3000/api/classes")
       .then(res => res.json())
-      .then(data => this.classes = data)
+      .then(data => {
+        this.classes = data.map(c => ({
+          ...c,
+          comments: Array.isArray(c.comments) ? c.comments : [],
+          rating: typeof c.rating === "number" ? c.rating : 0
+        }));
+      })
       .catch(() => console.error("Failed to load classes"));
   },
   methods: {
     truncate(text, max = 20) {
+      if (!text) {
+        return;
+      }
       return text.length > max ? text.slice(0, max) + '…' : text;
     },
-    openMenu(cls) {
+    async openMenu(cls) {
       this.selectedClass = cls;
       this.menuOpen = true;
       this.showRatingInput = false;
       this.userRating = null;
       this.userComment = "";
+
+      try {
+        const ratings = await fetch(`http://localhost:3000/api/classes/${encodeURIComponent(cls.name)}/ratings`)
+    .then(res => res.json());
+        this.selectedClass.comments = ratings;
+      } catch (err) {
+        console.error("Failed to load ratings", err);
+        this.selectedClass.comments = [];
+      }
     },
     closeMenu() {
       this.menuOpen = false;
@@ -154,7 +172,7 @@ export default {
       if (!this.userRating || !this.userComment) return;
 
       const rating = Number(this.userRating);
-      if (rating < 1 || rating > 5) {
+      if (rating < 1 || rating > 5 || rating === 0) {
         alert("Hinne peab olema vahemikus 1 kuni 5!");
         return;
       }

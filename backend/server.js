@@ -1,128 +1,171 @@
 import express from "express";
 import cors from "cors";
-import fs from "fs-extra";
+import sqlite3 from "sqlite3";
+import { open } from "sqlite";
 
 const app = express();
 const PORT = 3000;
-const DATA_FILE = "./data.json";
 
 app.use(cors());
 app.use(express.json());
 
+let db;
+(async () => {
+  db = await open({
+    filename: "./database.db",
+    driver: sqlite3.Database
+  });
 
-// Saa kõik klassid kätte.
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS classes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      rating REAL DEFAULT 0
+    );
+  `);
+
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      class_id INTEGER,
+      text TEXT NOT NULL,
+      stars INTEGER NOT NULL,
+      FOREIGN KEY(class_id) REFERENCES classes(id) ON DELETE CASCADE
+    );
+  `);
+})();
+
+// ROUTES
 app.get("/api/classes", async (req, res) => {
+  const classes = await db.all(`
+    SELECT c.*, 
+      COALESCE(
+        json_group_array(json_object('text', cm.text, 'stars', cm.stars)),
+        '[]'
+      ) AS comments
+    FROM classes c
+    LEFT JOIN comments cm ON c.id = cm.class_id
+    GROUP BY c.id
+  `);
+
+  classes.forEach(c => {
+    // Ensure it's always an array
+    c.comments = JSON.parse(c.comments);
+  });
+
+  res.json(classes);
+});
+// GET all ratings for a specific class
+app.get("/api/classes/:name/ratings", async (req, res) => {
+  const { name } = req.params;
+
   try {
-    const data = await fs.readJson(DATA_FILE);
-    res.json(data.classes);
+    // Find class ID
+    const cls = await db.get(`SELECT id FROM classes WHERE name = ?`, [name]);
+    if (!cls) return res.status(404).json({ error: "Class not found" });
+
+    // Get all comments/ratings for that class
+    const comments = await db.all(
+      `SELECT text, stars FROM comments WHERE class_id = ?`,
+      [cls.id]
+    );
+
+    res.json(comments); // returns an array
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Andmete lugemine ebaõnnestus" });
+    res.status(500).json({ error: "Failed to fetch ratings" });
   }
 });
 
 app.post("/api/classes", async (req, res) => {
   const { name } = req.body;
-  if (!name) return res.status(400).json({ error: "Puudub klassi nimi" });
+  if (!name) return res.status(400).json({ error: "Missing class name" });
 
   try {
-    const data = await fs.readJson(DATA_FILE);
-
-    // Check if class already exists
-    if (data.classes.find(c => c.name === name)) {
-      return res.status(400).json({ error: "Klass juba olemas" });
-    }
-
-    const newClass = { name, rating: 0, comments: [] };
-    data.classes.push(newClass);
-
-    await fs.writeJson(DATA_FILE, data, { spaces: 2 });
-    res.status(201).json(newClass);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Salvestamine ebaõnnestus" });
+    await db.run(`INSERT INTO classes (name) VALUES (?)`, [name]);
+    res.status(201).json({ name, rating: 0, comments: [] });
+  } catch {
+    res.status(400).json({ error: "Class already exists" });
   }
 });
 
 app.delete("/api/classes/:name", async (req, res) => {
   const { name } = req.params;
-
-  try {
-    const data = await fs.readJson(DATA_FILE);
-    const index = data.classes.findIndex(c => c.name === name);
-
-    if (index === -1) return res.status(404).json({ error: "Klassi ei leitud" });
-
-    const deleted = data.classes.splice(index, 1)[0];
-    await fs.writeJson(DATA_FILE, data, { spaces: 2 });
-
-    res.json(deleted);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Kustutamine ebaõnnestus" });
-  }
+  const result = await db.run(`DELETE FROM classes WHERE name = ?`, [name]);
+  if (result.changes === 0)
+    return res.status(404).json({ error: "Class not found" });
+  res.json({ message: "Deleted" });
 });
 
-// Post päring ratingu salvestamisek
 app.post("/api/classes/:name/rating", async (req, res) => {
   const { name } = req.params;
   const { text, stars } = req.body;
+  if (!text || !stars)
+    return res.status(400).json({ error: "Missing text or stars" });
 
-  if (!text || !stars) {
-    return res.status(400).json({ error: "Puudub kommentaar või hinne" });
-  }
+  const cls = await db.get(`SELECT id FROM classes WHERE name = ?`, [name]);
+  if (!cls)
+    return res.status(404).json({ error: "Class not found" });
 
-  try {
-    const data = await fs.readJson(DATA_FILE);
-    const cls = data.classes.find((c) => c.name === name);
+  await db.run(
+    `INSERT INTO comments (class_id, text, stars) VALUES (?, ?, ?)`,
+    [cls.id, text, stars]
+  );
 
-    if (!cls) {
-      return res.status(404).json({ error: "Õppeainet ei leitud" });
-    }
+  const avg = await db.get(
+    `SELECT AVG(stars) AS avg FROM comments WHERE class_id = ?`,
+    [cls.id]
+  );
 
-    cls.comments.push({ text, stars: Number(stars) });
-    cls.rating =
-      cls.comments.reduce((sum, c) => sum + c.stars, 0) / cls.comments.length;
+  await db.run(`UPDATE classes SET rating = ? WHERE id = ?`, [
+    avg.avg || 0,
+    cls.id,
+  ]);
 
-    await fs.writeJson(DATA_FILE, data, { spaces: 2 });
+  const updated = await db.get(
+    `SELECT * FROM classes WHERE id = ?`,
+    [cls.id]
+  );
+  updated.comments = await db.all(
+    `SELECT text, stars FROM comments WHERE class_id = ?`,
+    [cls.id]
+  );
 
-    res.json(cls);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "salvestamine JSONI failiebaõnnestus" });
-  }
+  res.json(updated);
 });
 
 app.delete("/api/classes/:name/rating/:index", async (req, res) => {
   const { name, index } = req.params;
+  const idx = Number(index);
 
-  try {
-    const data = await fs.readJson(DATA_FILE);
-    const cls = data.classes.find(c => c.name === name);
+  const cls = await db.get(`SELECT id FROM classes WHERE name = ?`, [name]);
+  if (!cls) return res.status(404).json({ error: "Class not found" });
 
-    if (!cls) return res.status(404).json({ error: "Õppeainet ei leitud" });
+  const comments = await db.all(
+    `SELECT id FROM comments WHERE class_id = ? ORDER BY id`,
+    [cls.id]
+  );
 
-    const idx = Number(index);
-    if (isNaN(idx) || idx < 0 || idx >= cls.comments.length)
-      return res.status(400).json({ error: "Vigane kommentaari indeks" });
+  if (idx < 0 || idx >= comments.length)
+    return res.status(404).json({ error: "Comment not found" });
 
-    cls.comments.splice(idx, 1);
+  await db.run(`DELETE FROM comments WHERE id = ?`, [comments[idx].id]);
 
-    // Recalculate rating
-    cls.rating =
-      cls.comments.reduce((sum, c) => sum + c.stars, 0) /
-      (cls.comments.length || 1);
+  // Update average rating
+  const avg = await db.get(`SELECT AVG(stars) AS avg FROM comments WHERE class_id = ?`, [cls.id]);
+  await db.run(`UPDATE classes SET rating = ? WHERE id = ?`, [avg.avg || 0, cls.id]);
 
-    await fs.writeJson(DATA_FILE, data, { spaces: 2 });
+  // Return updated class
+  const updated = await db.get(`SELECT * FROM classes WHERE id = ?`, [cls.id]);
+  updated.comments = await db.all(
+    `SELECT text, stars FROM comments WHERE class_id = ?`,
+    [cls.id]
+  );
 
-    res.json(cls);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Kommentaari kustutamine ebaõnnestus" });
-  }
+  res.json(updated);
 });
 
 
 app.listen(PORT, () =>
-  console.log(`Server: http://localhost:${PORT}`)
+  console.log(`Server running on http://localhost:${PORT}`)
 );
