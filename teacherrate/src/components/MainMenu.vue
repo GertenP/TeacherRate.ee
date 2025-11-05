@@ -108,164 +108,164 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: "MainMenu",
-  data() {
-    return {
-      newClassName: "",
-      searchQuery: "",
-      menuOpen: false,
-      showRatingInput: false,
-      selectedClass: {},
-      userRating: null,
-      userComment: "",
-      selectedComment: null,
-      classes: []
-    };
-  },
-  computed: {
-    filteredClasses() {
-      const q = this.searchQuery.toLowerCase();
-      return this.classes.filter(c => c.name.toLowerCase().includes(q));
-    }
-  },
-  mounted() {
-    fetch("http://localhost:3000/api/classes")
-      .then(res => res.json())
-      .then(data => {
-        this.classes = data.map(c => ({
-          ...c,
-          comments: Array.isArray(c.comments) ? c.comments : [],
-          rating: typeof c.rating === "number" ? c.rating : 0
-        }));
-      })
-      .catch(() => console.error("Failed to load classes"));
-  },
-  methods: {
-    truncate(text, max = 20) {
-      if (!text) {
-        return;
-      }
-      return text.length > max ? text.slice(0, max) + '…' : text;
-    },
-    async openMenu(cls) {
-      this.selectedClass = cls;
-      this.menuOpen = true;
-      this.showRatingInput = false;
-      this.userRating = null;
-      this.userComment = "";
+<script setup>
+import { ref, computed, onMounted } from 'vue';
 
-      try {
-        const ratings = await fetch(`http://localhost:3000/api/classes/${encodeURIComponent(cls.name)}/ratings`)
-    .then(res => res.json());
-        this.selectedClass.comments = ratings;
-      } catch (err) {
-        console.error("Failed to load ratings", err);
-        this.selectedClass.comments = [];
-      }
-    },
-    closeMenu() {
-      this.menuOpen = false;
-    },
-    async submitRating() {
-      if (!this.userRating || !this.userComment) return;
+const newClassName = ref('');
+const searchQuery = ref('');
+const menuOpen = ref(false);
+const showRatingInput = ref(false);
+const selectedClass = ref({});
+const userRating = ref(null);
+const userComment = ref('');
+const selectedComment = ref(null);
+const classes = ref([]);
 
-      const rating = Number(this.userRating);
-      if (rating < 1 || rating > 5 || rating === 0) {
-        alert("Hinne peab olema vahemikus 1 kuni 5!");
-        return;
-      }
+const filteredClasses = computed(() => {
+  const q = searchQuery.value.toLowerCase();
+  return classes.value.filter(c => c.name.toLowerCase().includes(q));
+});
 
-      const newRating = { text: this.userComment, stars: rating };
+onMounted(() => {
+  fetch("http://localhost:3000/api/classes")
+    .then(res => res.json())
+    .then(data => {
+      classes.value = data.map(c => ({
+        ...c,
+        comments: Array.isArray(c.comments) ? c.comments : [],
+        rating: typeof c.rating === "number" ? c.rating : 0
+      }));
+    })
+    .catch(() => console.error("Failed to load classes"));
+});
 
-      try {
-        const updatedClass = await fetch(
-          `http://localhost:3000/api/classes/${this.selectedClass.name}/rating`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newRating)
-          }
-        ).then(res => res.json());
-
-        Object.assign(this.selectedClass, updatedClass);
-        const index = this.classes.findIndex(c => c.name === updatedClass.name);
-        if (index !== -1) {
-          this.classes.splice(index, 1, updatedClass);
-        }
-
-        // Reset rating input
-        this.showRatingInput = false;
-        this.userRating = null;
-        this.userComment = "";
-
-      } catch (err) {
-        console.error(err);
-        alert("Hinne salvestamine ebaõnnestus!");
-      }
-    },
-
-    async deleteComment(index) {
-      if (!confirm("Kas oled kindel, et soovid selle kommentaari kustutada?")) return;
-
-      this.selectedClass.comments.splice(index, 1)[0];
-
-      // Recalculate average
-      this.selectedClass.rating =
-        this.selectedClass.comments.reduce((sum, c) => sum + c.stars, 0) /
-        (this.selectedClass.comments.length || 1);
-
-      // Update JSON on server
-      await fetch(`http://localhost:3000/api/classes/${this.selectedClass.name}/rating/${index}`, {
-        method: "DELETE"
-      });
-    },
-    async addClass() {
-      const name = this.newClassName.trim();
-      if (!name) return alert("Sisesta klassi nimi!");
-
-      try {
-        const res = await fetch("http://localhost:3000/api/classes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) return alert(data.error);
-
-        this.classes.push(data);
-        this.newClassName = "";
-      } catch (err) {
-        console.error(err);
-        alert("Klassi lisamine ebaõnnestus");
-      }
-    },
-    async deleteClass(index) {
-      const cls = this.classes[index];
-      if (!confirm(`Kas oled kindel, et soovid kustutada "${cls.name}"?`)) return;
-
-      try {
-        const res = await fetch(`http://localhost:3000/api/classes/${cls.name}`, {
-          method: "DELETE"
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          return alert(data.error);
-        }
-
-        this.classes.splice(index, 1);
-      } catch (err) {
-        console.error(err);
-        alert("Kustutamine ebaõnnestus");
-      }
-    }
+function truncate(text, max = 20) {
+  if (!text) {
+    return;
   }
-};
+  return text.length > max ? text.slice(0, max) + '…' : text;
+}
+
+async function openMenu(cls) {
+  selectedClass.value = cls;
+  menuOpen.value = true;
+  showRatingInput.value = false;
+  userRating.value = null;
+  userComment.value = "";
+
+  try {
+    const ratings = await fetch(`http://localhost:3000/api/classes/${encodeURIComponent(cls.name)}/ratings`)
+      .then(res => res.json());
+    selectedClass.value.comments = ratings;
+  } catch (err) {
+    console.error("Failed to load ratings", err);
+    selectedClass.value.comments = [];
+  }
+}
+
+function closeMenu() {
+  menuOpen.value = false;
+}
+
+async function submitRating() {
+  if (!userRating.value || !userComment.value) return;
+
+  const rating = Number(userRating.value);
+  if (rating < 1 || rating > 5 || rating === 0) {
+    alert("Hinne peab olema vahemikus 1 kuni 5!");
+    return;
+  }
+
+  const newRating = { text: userComment.value, stars: rating };
+
+  try {
+    const updatedClass = await fetch(
+      `http://localhost:3000/api/classes/${selectedClass.value.name}/rating`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newRating)
+      }
+    ).then(res => res.json());
+
+    Object.assign(selectedClass.value, updatedClass);
+    const index = classes.value.findIndex(c => c.name === updatedClass.name);
+    if (index !== -1) {
+      classes.value.splice(index, 1, updatedClass);
+    }
+
+    // Reset rating input
+    showRatingInput.value = false;
+    userRating.value = null;
+    userComment.value = "";
+
+  } catch (err) {
+    console.error(err);
+    alert("Hinne salvestamine ebaõnnestus!");
+  }
+}
+
+async function deleteComment(index) {
+  if (!confirm("Kas oled kindel, et soovid selle kommentaari kustutada?")) return;
+
+  selectedClass.value.comments.splice(index, 1)[0];
+
+  // Recalculate average
+  selectedClass.value.rating =
+    selectedClass.value.comments.reduce((sum, c) => sum + c.stars, 0) /
+    (selectedClass.value.comments.length || 1);
+
+  // Update JSON on server
+  await fetch(`http://localhost:3000/api/classes/${selectedClass.value.name}/rating/${index}`, {
+    method: "DELETE"
+  });
+}
+
+async function addClass() {
+  const name = newClassName.value.trim();
+  if (!name) return alert("Sisesta klassi nimi!");
+
+  try {
+    const res = await fetch("http://localhost:3000/api/classes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) return alert(data.error);
+
+    classes.value.push(data);
+    newClassName.value = "";
+  } catch (err) {
+    console.error(err);
+    alert("Klassi lisamine ebaõnnestus");
+  }
+}
+
+async function deleteClass(index) {
+  const cls = classes.value[index];
+  if (!confirm(`Kas oled kindel, et soovid kustutada "${cls.name}"?`)) return;
+
+  try {
+    const res = await fetch(`http://localhost:3000/api/classes/${cls.name}`, {
+      method: "DELETE"
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      return alert(data.error);
+    }
+
+    classes.value.splice(index, 1);
+  } catch (err) {
+    console.error(err);
+    alert("Kustutamine ebaõnnestus");
+  }
+}
 </script>
+
 
 <style>
 #elite_gif {
